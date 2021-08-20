@@ -1,0 +1,33 @@
+version: '3'
+
+services:
+  reverse-proxy:
+    image: traefik:v2.5
+    command: 
+      - --providers.docker
+      - --api.insecure=true
+
+    ports:      
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock  
+
+  whoami:
+    image: traefik/whoami
+    labels:
+      - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
+      - "traefik.http.routers.whoami.middlewares=jwt"
+
+  jwt:
+    build: FiberJWT
+    image: jwt:latest
+    labels:
+      - "traefik.http.routers.jwt.rule=Host(`jwt.localhost`)"
+      - "traefik.http.middlewares.jwt.forwardauth.address=http://jwt:3000/auth"
+      - "traefik.http.middlewares.jwt.forwardauth.trustForwardHeader=true"
+      - "traefik.http.middlewares.jwt.forwardauth.authResponseHeaders=X-Forwarded-User"
+      - "traefik.http.services.jwt.loadbalancer.server.port=3000"
+    
+ 
